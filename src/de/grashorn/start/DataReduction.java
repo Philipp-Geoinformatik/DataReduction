@@ -1,4 +1,4 @@
-package de.grashorn.cleanarchitecture.start;
+package de.grashorn.start;
 
 import de.grashorn.model.TimedValue;
 import de.grashorn.model.de.grashorn.model.entities.GraphColumn;
@@ -10,17 +10,27 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 
+/**
+ * @author Philipp Grashorn
+ */
 public class DataReduction extends Application {
 
-
+    /**
+     * Starts the {@link Application}
+     *
+     * @param primaryStage the {@link Stage} of this simple {@link Application}
+     */
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage primaryStage) {
         primaryStage.setTitle("Drawing Operations Test");
         Pane root = new Pane();
         int paneWidth = 500;
@@ -29,59 +39,75 @@ public class DataReduction extends Application {
         GraphicsContext gc = canvas.getGraphicsContext2D();
         root.getChildren().add(canvas);
         //
-        ArrayList<TimedValue> list = createSinus(7_000_000, 0.000001, 200);
-        Instant before = Instant.now();
-        ArrayList<TimedValue> small = reduce(list, paneWidth);
-        Instant after = Instant.now();
-        System.out.println("Reduce data needs: " + Duration.between(before, after));
-        //
+        ArrayList<TimedValue> list = createSinus(1_000_000, 0.00001, 200);
         canvas.widthProperty().bind(root.widthProperty());
         canvas.heightProperty().bind(root.heightProperty());
         //
-        before = Instant.now();
-        root.heightProperty().addListener(l -> drawData(small, gc));
-        canvas.widthProperty().addListener(l -> drawData(small, gc));
-        after = Instant.now();
-        System.out.println("Painting data needs: " + Duration.between(before, after));
+        root.heightProperty().addListener(l -> {
+            ArrayList<TimedValue> small2 = reduce(list, (int) root.widthProperty().get());
+            drawData(small2, gc);
+        });
+        canvas.widthProperty().addListener(l -> {
+            ArrayList<TimedValue> small3 = reduce(list, (int) root.widthProperty().get());
+            drawData(small3, gc);
+        });
         //
         primaryStage.setScene(new Scene(root));
         primaryStage.show();
 
     }
 
+    /**
+     * Draws the {@link TimedValue}s by the deliverd {@link GraphicsContext} @param values
+     *
+     * @param values the data to draw by the {@link GraphicsContext}
+     * @param gc     the {@link GraphicsContext}
+     */
     private void drawData(ArrayList<TimedValue> values, GraphicsContext gc) {
         gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
-        gc.setStroke(Color.BLUE);
+        gc.setStroke(Color.GREY);
         gc.setLineWidth(1);
-        gc.strokeLine(40, 10, 10, 40);
-        gc.fillOval(10, 60, 30, 30);
         gc.strokeLine(0, gc.getCanvas().getHeight() / 2, gc.getCanvas().getWidth(), gc.getCanvas().getHeight() / 2);
         double scaleX = gc.getCanvas().getWidth() / (values.size());
         double offset_y = gc.getCanvas().getHeight() / 2;
         gc.fillText("(" + values.size() + " points)", gc.getCanvas().getWidth() / 2, gc.getCanvas().getHeight() / 2);
+
         for (int i = 0; i < values.size() - 1; i++) {
             TimedValue tv1 = values.get(i);
             TimedValue tv2 = values.get(i + 1);
             gc.strokeLine(i * scaleX, tv1.value + offset_y, (i + 1) * scaleX, tv2.value + offset_y);
-            gc.fillOval(i * scaleX, tv1.value + offset_y, 4, 4);
-            if (values.size() <= 50)
-                gc.fillText("( " + tv1.value + " )", i * scaleX, tv1.value + offset_y);
+            gc.setFill(Color.RED);
+            //gc.fillOval(i * scaleX, tv1.value + offset_y, 4.2, 4.2);
         }
-
     }
 
-    public ArrayList<TimedValue> createSinus(int amount, double scaler, double factor) {
+    /**
+     * This method creates an {@link ArrayList<TimedValue>} which represent values of the configured sinus function.
+     *
+     * @param amount the amount of generated values
+     * @param scaler the scale 1 = 1 * PI
+     * @param factor the amplitude of the sinus function
+     * @return an {@link ArrayList<TimedValue>} which represent the sinus function.
+     */
+    private ArrayList<TimedValue> createSinus(int amount, double scaler, double factor) {
+        Instant before = Instant.now();
+        //
         ArrayList<TimedValue> vals = new ArrayList<>();
         int i = 0;
         while (i < amount) {
             vals.add(new TimedValue((long) i, Math.sin((double) i * scaler * Math.PI) * factor));
             i++;
         }
+        Instant after = Instant.now();
+        System.out.println("Creation needs: " + Duration.between(before, after));
         return vals;
-
     }
 
 
+    /**
+     * @param values
+     * @return
+     */
     public LinkedList<TimedValue> createVals(int values) {
         LinkedList<TimedValue> vals = new LinkedList<>();
         int i = 0;
@@ -98,6 +124,8 @@ public class DataReduction extends Application {
      * @return
      */
     public ArrayList<TimedValue> reduce(List<TimedValue> list, int destSize) {
+        Instant before = Instant.now();
+        //
         ArrayList<TimedValue> finalList = new ArrayList<>();
         //IntervalToCheckForColum
         int startSize = list.size();
@@ -124,6 +152,9 @@ public class DataReduction extends Application {
         } else {
             finalList.addAll(list);
         }
+        Instant after = Instant.now();
+        DecimalFormat formatter = (DecimalFormat) NumberFormat.getInstance(Locale.US);
+        System.out.println("Reduction of " + formatter.format(list.size()) + " points: " + Duration.between(before, after));
         return finalList;
     }
 
