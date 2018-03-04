@@ -35,7 +35,7 @@ public class DataReduction extends Application {
         Pane root = new Pane();
         int paneWidth = 500;
         int paneHeight = 500;
-        Canvas canvas = new Canvas(paneWidth, paneHeight); 
+        Canvas canvas = new Canvas(paneWidth, paneHeight);
         GraphicsContext gc = canvas.getGraphicsContext2D();
         root.getChildren().add(canvas);
         //
